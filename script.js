@@ -1,153 +1,102 @@
-const todoContainer = document.querySelector(".todo-container");
-const inputTodo = document.getElementById("input-todo");
-const addTodo = document.getElementById("add-todo");
+const todoForm = document.getElementById('todo-form');
+const inputTodo = document.getElementById('input-todo');
+const todoContainer = document.getElementById('todo-container');
+const modalBackground = document.getElementById('modal-background');
+const closeModal = document.getElementById('close-modal');
+const saveTodoBtn = document.getElementById('save-todo');
+const modalForm = document.getElementById('modal-form');
+let currentTodoId = null;
 
-const modalBG = document.querySelector(".modal-background");
-const closeModal = document.querySelector("#close-modal");
-const editTodoName = document.getElementById("edit-todo-name");
-const editTodoCompleted = document.getElementById("edit-todo-completed");
-const saveTodo = document.getElementById("save-todo");
+// Fetch todos when the page loads
+window.onload = function() {
+  fetchTodos();
+};
 
-let todoArray = [];
-
-const URL = "http://localhost:3000/todos";
-
-function display_Todos(todoArr) {
-  todoArr.forEach((todoElem) => {
-    // Parent
-    let todo = document.createElement("div");
-    todo.classList.add("todo");
-
-    // Children
-    let todoInfo = document.createElement("div");
-    todoInfo.classList.add("todo-info");
-    let todoBtn = document.createElement("form");
-    todoBtn.classList.add("todo-btn");
-
-    // Grand Children
-    let todoCompleted = document.createElement("input");
-    todoCompleted.classList.add("todo-completed");
-    todoCompleted.setAttribute("type", "checkbox");
-    todoCompleted.checked = todoElem.completed;
-    let todoName = document.createElement("p");
-    todoName.classList.add("todo-name");
-    todoName.innerHTML = todoElem.name;
-
-    let todoEdit = document.createElement("button");
-    todoEdit.classList.add("todo-edit");
-    todoEdit.innerHTML = "Edit";
-    todoEdit.addEventListener("click", (e) => {
-      e.preventDefault();
-      open_Modal(todoElem);
+// Fetch Todos from the backend
+function fetchTodos() {
+  fetch('http://localhost:3000/todos')
+    .then(response => response.json())
+    .then(data => {
+      displayTodos(data.todos);
     });
-    let todoDel = document.createElement("button");
-    todoDel.classList.add("todo-delete");
-    todoDel.innerHTML = "Delete";
-    todoDel.addEventListener("click", () => {
-      console.log(todoElem);
-      del_Todo(todoElem);
-    });
+}
 
-    todoInfo.appendChild(todoCompleted);
-    todoInfo.appendChild(todoName);
-    todoBtn.appendChild(todoEdit);
-    todoBtn.appendChild(todoDel);
-
-    todo.appendChild(todoInfo);
-    todo.appendChild(todoBtn);
-
-    todoContainer.appendChild(todo);
+// Display Todos
+function displayTodos(todos) {
+  todoContainer.innerHTML = '';
+  todos.forEach(todo => {
+    const todoElement = document.createElement('div');
+    todoElement.classList.add('todo');
+    todoElement.innerHTML = `
+      <div class="todo-info">
+        <span class="${todo.completed ? 'completed' : ''}">${todo.desc}</span>
+      </div>
+      <div class="todo-btn">
+        <button class="todo-edit" onclick="editTodo('${todo._id}')">Edit</button>
+        <button class="todo-delete" onclick="deleteTodo('${todo._id}')">Delete</button>
+      </div>
+    `;
+    todoContainer.appendChild(todoElement);
   });
 }
 
-async function get_Todos() {
-  try {
-    const resp = await fetch(URL);
-    const data = await resp.json();
-    return data;
-  } catch (err) {
-    return err;
-  }
-}
-
-async function post_Todo() {
-  try {
-    let options = {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        name: inputTodo.value,
-        completed: false,
-      }),
-    };
-    const resp = await fetch(URL, options);
-    const data = await resp.json();
-  } catch (err) {
-    return err;
-  }
-}
-
-async function del_Todo(todoElem) {
-  try {
-    const del_url = URL + "/" + todoElem._id;
-    let options = {
-      method: "DELETE",
-    };
-    const resp = await fetch(del_url, options);
-    const data = await resp.json();
-    console.log(data);
-  } catch (err) {
-    return err;
-  }
-}
-
-async function edit_Todo(todoElem) {
-  try {
-    const edit_url = URL + "/" + todoElem._id;
-    let options = {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        name: editTodoName.value,
-        completed: editTodoCompleted.checked,
-      }),
-    };
-    const resp = await fetch(edit_url, options);
-    const data = await resp.json();
-    console.log(data);
-  } catch (err) {
-    return err;
-  }
-}
-
-function open_Modal(todoElem) {
-  editTodoName.value = todoElem.name;
-  editTodoCompleted.checked = todoElem.completed;
-  modalBG.style.display = "block";
-  closeModal.addEventListener("click", () => {
-    modalBG.style.display = "none";
-  });
-  saveTodo.addEventListener("click", () => {
-    modalBG.style.display = "none";
-    edit_Todo(todoElem);
-  });
-  console.log(todoElem);
-}
-
-get_Todos()
-  .then((todoArr) => {
-    todoArray = todoArr;
-    console.log(todoArray);
-    display_Todos(todoArray);
+// Add Todo
+todoForm.addEventListener('submit', function(event) {
+  event.preventDefault();
+  const todoDesc = inputTodo.value;
+  fetch('http://localhost:3000/todos', {
+    method: 'POST',
+    body: JSON.stringify({ desc: todoDesc, completed: false }),
+    headers: { 'Content-Type': 'application/json' },
   })
-  .catch((err) => console.log(err));
-
-addTodo.addEventListener("click", () => {
-  if (inputTodo.value != "") {
-    post_Todo();
-  }
+    .then(response => response.json())
+    .then(data => {
+      fetchTodos();
+      inputTodo.value = '';
+    });
 });
+
+// Edit Todo
+function editTodo(todoId) {
+  currentTodoId = todoId;
+  fetch(`http://localhost:3000/todos/${todoId}`)
+    .then(response => response.json())
+    .then(todo => {
+      document.getElementById('edit-todo-name').value = todo.desc;
+      document.getElementById('edit-todo-completed').checked = todo.completed;
+      modalBackground.style.display = 'flex';
+    });
+}
+
+// Close Modal
+closeModal.addEventListener('click', function() {
+  modalBackground.style.display = 'none';
+});
+
+// Save Todo
+saveTodoBtn.addEventListener('click', function() {
+  const updatedDesc = document.getElementById('edit-todo-name').value;
+  const updatedCompleted = document.getElementById('edit-todo-completed').checked;
+
+  fetch(`http://localhost:3000/todos/${currentTodoId}`, {
+    method: 'PUT',
+    body: JSON.stringify({ desc: updatedDesc, completed: updatedCompleted }),
+    headers: { 'Content-Type': 'application/json' },
+  })
+    .then(response => response.json())
+    .then(data => {
+      fetchTodos();
+      modalBackground.style.display = 'none';
+    });
+});
+
+// Delete Todo
+function deleteTodo(todoId) {
+  fetch(`http://localhost:3000/todos/${todoId}`, {
+    method: 'DELETE',
+  })
+    .then(response => response.json())
+    .then(() => {
+      fetchTodos();
+    });
+}
