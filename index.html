@@ -1,30 +1,38 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Todo List Vanilla</title>
+    <title>Todo List</title>
     <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
-    <h1>Todo List </h1>
-    <div class="input-container">
-        <input id="input-todo" type="text" placeholder="Enter todo" />
-        <button id="add-todo">+</button>
-    </div>
-    <div class="container">
-        <!-- <div class="todo">
-            <p>Write C#</p>
-            <div class="actions">
-                <input type="checkbox">
-                <button>Delete</button>
-            </div>
-        </div> -->
-    </div>
-    <script src="script.js"></script>
-    <script src="index.js"></script>
-</body>
+    <h1>Todo List</h1>
+    <form class="input-container" id="todo-form">
+        <input id="input-todo" type="text" placeholder="Enter Todo" required>
+        <button id="add-todo" type="submit">+</button>
+    </form>
 
+    <div class="todo-container" id="todo-container">
+        <!-- Todo items will be injected here -->
+    </div>
+
+    <div class="modal-background" id="modal-background">
+        <div class="modal">
+            <div class="modal-top">
+                <h1>Edit Todo</h1>
+                <span class="close-modal" id="close-modal">&#x2715;</span>
+            </div>
+            <form class="modal-bottom" id="modal-form">
+                <input type="text" id="edit-todo-name" placeholder="Todo Name">
+                <div id="edit-todo-completed-wrapper">
+                    <input type="checkbox" id="edit-todo-completed"> Completed
+                </div>
+                <button id="save-todo">Save</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
 </html>
