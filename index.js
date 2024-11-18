@@ -4,31 +4,24 @@ const { v4: uuidv4 } = require("uuid");
 const cors = require("cors");
 const mongoose = require('mongoose');
 
-
 const app = express();
 const port = 3000;
-
-app.use(custom_middleware);
-
-function custom_middleware(req, res, next) {
-  console.log("from middleware");
-  next();
-}
 
 app.use(bodyParser.json());
 app.use(cors());
 
 // MongoDB connection
 mongoose.connect("mongodb+srv://godugupravalika:Pravali7%40@todocluster.m0xkd.mongodb.net/?retryWrites=true&w=majority&appName=ToDoCluster")
-
   .then(() => console.log('Connected to MongoDB'))
   .catch((error) => console.error('Error connecting to MongoDB:', error));
 
-const todos = [
-  { id: 1, desc: "Write Python", completed: false },
-  { id: 2, desc: "Write JavaScript", completed: true },
-  { id: 3, desc: "Write SQL", completed: false },
-];
+// Define Todo Schema
+const todoSchema = new mongoose.Schema({
+  desc: String,
+  completed: Boolean,
+});
+
+const Todo = mongoose.model('Todo', todoSchema);
 
 // Home Route
 app.get("/", (req, res) => {
@@ -37,65 +30,69 @@ app.get("/", (req, res) => {
 
 // Get All Todos
 app.get("/todos", (req, res) => {
-// Returning the todos as JSON
-    res.json({
-      message: "List of Todos",
-      todos: todos,
-    });
+  Todo.find()
+    .then((todos) => {
+      res.json({
+        message: "List of Todos",
+        todos: todos,
+      });
+    })
+    .catch((err) => res.status(500).send(err));
 });
 
 // Get a Single Todo
 app.get("/todos/:id", (req, res) => {
-  const todo = todos.find((todo) => todo.id == req.params.id);
-  if (todo) {
-    res.json(todo);
-  } else {
-    res.status(404).send("Todo not found");
-  }
+  Todo.findById(req.params.id)
+    .then((todo) => {
+      if (!todo) {
+        return res.status(404).send("Todo not found");
+      }
+      res.json(todo);
+    })
+    .catch((err) => res.status(500).send(err));
 });
 
 // Add a New Todo
 app.post("/todos", (req, res) => {
   const { desc, completed } = req.body;
-  if (desc === undefined || completed === undefined) {
-    return res.status(400).send("Invalid request body");
-  }
-  const newTodo = { id: uuidv4(), desc, completed };
-  todos.push(newTodo);
-  res.json(todos);
+  const newTodo = new Todo({
+    desc,
+    completed: completed || false,
+  });
+
+  newTodo.save()
+    .then((todo) => {
+      res.status(201).json(todo);
+    })
+    .catch((err) => res.status(500).send(err));
 });
 
 // Update a Todo
 app.put("/todos/:id", (req, res) => {
-  const todo = todos.find((todo) => todo.id == req.params.id);
-  if (todo) {
-    todo.desc = req.body.desc;
-    todo.completed = req.body.completed;
-    return res.json(todos); // Return here to prevent further execution
-  }
-  else {
-    return res.status(404).send("Todo with that ID doesn't exist");
-  }
-    
+  const { desc, completed } = req.body;
+  Todo.findByIdAndUpdate(req.params.id, { desc, completed }, { new: true })
+    .then((updatedTodo) => {
+      if (!updatedTodo) {
+        return res.status(404).send("Todo not found");
+      }
+      res.json(updatedTodo);
+    })
+    .catch((err) => res.status(500).send(err));
 });
 
 // Delete a Todo
 app.delete("/todos/:id", (req, res) => {
-  const index = todos.findIndex((todo) => todo.id == req.params.id);
-  if (index !== -1) {
-    todos.splice(index, 1);
-    return res.json(todos); // Return to prevent further code execution
-  } else {
-    return res.status(404).send("Todo not found");
-  }
+  Todo.findByIdAndDelete(req.params.id)
+    .then((deletedTodo) => {
+      if (!deletedTodo) {
+        return res.status(404).send("Todo not found");
+      }
+      res.json(deletedTodo);
+    })
+    .catch((err) => res.status(500).send(err));
 });
 
-// Error handling middleware for unmatched routes
-app.use((req, res) => {
-    res.status(404).json({ error: 'Route not found' });
-  });
-  
-  // Start the server
-  app.listen(port, () => {
-    console.log("App is working/listening on port:", port);
+// Start the server
+app.listen(port, () => {
+  console.log("App is working/listening on port:", port);
 });
